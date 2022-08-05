@@ -94,12 +94,12 @@ class Sat(Thread):
         self.device = self._get_device()
         self.assinatura = assinatura
 
-        try:
-            self.printer_conf = config.carregar('/opt/sat/satextrato.ini')
-            _logger.info('[HW FISCAL] Impressora - Carregada a configuração personalizada')
-        except Exception as e:
-            self.printer_conf = config.padrao()
-            _logger.info('[HW FISCAL] Impressora - Carregada a configuração padrão', e)
+        # try:
+        #     self.printer_conf = config.carregar('/opt/sat/satextrato.ini')
+        #     _logger.info('[HW FISCAL] Impressora - Carregada a configuração personalizada')
+        # except Exception as e:
+        #     self.printer_conf = config.padrao()
+        #     _logger.info('[HW FISCAL] Impressora - Carregada a configuração padrão', e)
 
     def lockedstart(self):
         with self.lock:
