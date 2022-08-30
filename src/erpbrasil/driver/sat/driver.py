@@ -500,6 +500,9 @@ class Sat(Thread):
         elif self.fiscal_printer_type == 'USBConnection':
             from pyescpos.conn.usb import USBConnection as Connection
             conn = Connection.create(**kwargs)
+        elif self.fiscal_printer_type == 'Windows':
+            from pyescpos.conn.win32 import Win32Raw as Connection
+            conn = Connection.create(**kwargs)
 
         if self.impressora == 'epson-tm-t20':
             _logger.info('SAT Impressao: Epson TM-T20')
