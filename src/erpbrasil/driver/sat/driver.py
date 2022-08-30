@@ -89,7 +89,7 @@ class Sat(Thread):
         self.fiscal_printer_type = fiscal_printer_type
         self.lock = Lock()
         self.satlock = Lock()
-        self.status = {'status': 'connecting', 'messages': []}
+        self.status = {'status': 'connected', 'messages': []}
         # self.printer = self._init_printer()
         self.device = self._get_device()
         self.assinatura = assinatura
@@ -481,44 +481,47 @@ class Sat(Thread):
         kwargs = ast.literal_eval(self.printer_params)
 
         if self.fiscal_printer_type == 'NetworkConnection':
-            from escpos.conn.network import NetworkConnection as Connection
+            from pyescpos.conn.network import NetworkConnection as Connection
             conn = Connection.create(**kwargs)
         elif self.fiscal_printer_type == 'CupsConnection':
-            from escpos.conn.cups import CupsConnection as Connection
+            from pyescpos.conn.cups import CupsConnection as Connection
             conn = Connection.create(**kwargs)
         elif self.fiscal_printer_type == 'BluetoothConnection':
-            from escpos.conn.bt import BluetoothConnection as Connection
+            from pyescpos.conn.bt import BluetoothConnection as Connection
         elif self.fiscal_printer_type == 'DummyConnection':
-            from escpos.conn.dummy import DummyConnection as Connection
+            from pyescpos.conn.dummy import DummyConnection as Connection
             conn = Connection()
         elif self.fiscal_printer_type == 'FileConnection':
-            from escpos.conn.file import FileConnection as Connection
+            from pyescpos.conn.file import FileConnection as Connection
             conn = Connection.create(**kwargs)
         elif self.fiscal_printer_type == 'SerialConnection':
-            from escpos.conn.serial import SerialSettings as Connection
+            from pyescpos.conn.serial import SerialSettings as Connection
             conn = Connection.parse(self.printer_params).get_connection()
         elif self.fiscal_printer_type == 'USBConnection':
-            from escpos.conn.usb import USBConnection as Connection
+            from pyescpos.conn.usb import USBConnection as Connection
             conn = Connection.create(**kwargs)
 
         if self.impressora == 'epson-tm-t20':
             _logger.info('SAT Impressao: Epson TM-T20')
-            from escpos.impl.epson import TMT20 as Printer
+            from pyescpos.impl.epson import TMT20 as Printer
         elif self.impressora == 'bematech-mp4200th':
             _logger.info('SAT Impressao: Bematech MP4200TH')
-            from escpos.impl.bematech import MP4200TH as Printer
+            from pyescpos.impl.bematech import MP4200TH as Printer
         elif self.impressora == 'daruma-dr700':
             _logger.info('SAT Impressao: Daruma Dr700')
-            from escpos.impl.daruma import DR700 as Printer
+            from pyescpos.impl.daruma import DR700 as Printer
         elif self.impressora == 'elgin-i9':
             _logger.info('SAT Impressao: Elgin I9')
-            from escpos.impl.elgin import ElginI9 as Printer
+            from pyescpos.impl.elgin import ElginI9 as Printer
+        elif self.impressora == 'generic':
+            _logger.info('SAT Impressao: GenericESCPOS')
+            from pyescpos.impl.epson import GenericESCPOS as Printer
         else:
             return False
 
         printer = Printer(conn)
 
-        from escpos import feature
+        from pyescpos import feature
         printer.hardware_features.update({
             feature.COLUMNS: feature.Columns(
                 normal=42,
