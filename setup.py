@@ -72,7 +72,8 @@ setup(
         'erpbrasil.base',
         'satcfe',
         'satcomum',
-        'satextrato',
+        #'satextrato',
+        #'PyESCPOS',
     ],
     extras_require={
         # eg:
