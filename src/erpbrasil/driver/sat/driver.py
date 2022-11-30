@@ -334,7 +334,7 @@ class Sat(Thread):
         kwargs = {}
         if json.get('client'):
             # TODO: Verificar se tamanho == 14: cnpj
-            documento = str(json['client'].get("cnpj_cpf"))
+            documento = str(json['client'])
             if cnpj_cpf.validar_cnpj(documento):
                 kwargs['destinatario'] = Destinatario(CNPJ=documento)
             if cnpj_cpf.validar_cpf(documento):
