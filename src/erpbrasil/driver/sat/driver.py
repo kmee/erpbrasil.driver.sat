@@ -51,11 +51,11 @@ try:
     )
     from satcfe.excecoes import ErroRespostaSATInvalida
     from satcfe.excecoes import ExcecaoRespostaSAT
-#    from satextrato import ExtratoCFeVenda
-#    from satextrato import ExtratoCFeCancelamento
+    from satextrato import ExtratoCFeVenda
+    from satextrato import ExtratoCFeCancelamento
     from erpbrasil.base.misc import punctuation_rm
     from erpbrasil.base.fiscal import cnpj_cpf
-#    from satextrato import config
+    from satextrato import config
 except ImportError:
     _logger.error('Odoo module hw_l10n_br_pos depends on the satcfe module')
     satcfe = None
@@ -541,14 +541,14 @@ class Sat(Thread):
             printer = self._init_printer()
             _logger.info(f'Arquivo para impressao: {base64.b64decode(xml).decode("utf-8")}')
             ExtratoCFeVenda(
-                fp=io.StringIO(base64.b64decode(xml).decode('utf-8')), impressora=printer, config=self.printer_conf
+                fp=io.StringIO(base64.b64decode(xml).decode('utf-8')), impressora=printer
             ).imprimir()
             try:
                 printer.kick_drawer(0)
             except Exception as e:
                 _logger.info('[HW FISCAL] Impressora - Falha ao abrir a gaveta')
-            if self.fiscal_printer_type == 'CupsConnection':
-                printer.device.close()
+
+            printer.device.close()
         except Exception as e:
             _logger.info('[HW FISCAL] Impressora - Falha ao imprimir')
             _logger.info(e)
