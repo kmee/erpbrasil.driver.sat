@@ -10,6 +10,9 @@ import base64
 from datetime import datetime
 import json
 
+from erpbrasil.base.misc import punctuation_rm
+from erpbrasil.base.fiscal import cnpj_cpf
+
 _logger = logging.getLogger(__name__)
 
 try:
@@ -53,8 +56,6 @@ try:
     from satcfe.excecoes import ExcecaoRespostaSAT
     from satextrato import ExtratoCFeVenda
     from satextrato import ExtratoCFeCancelamento
-    from erpbrasil.base.misc import punctuation_rm
-    from erpbrasil.base.fiscal import cnpj_cpf
     from satextrato import config
 except ImportError:
     _logger.error('Odoo module hw_l10n_br_pos depends on the satcfe module')
