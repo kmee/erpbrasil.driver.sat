@@ -4,6 +4,7 @@ import time
 from threading import Thread, Lock
 from requests import ConnectionError
 from decimal import Decimal as D
+from collections import OrderedDict
 import io
 
 import base64
@@ -81,7 +82,8 @@ class RespostaEncoder(json.JSONEncoder):
 
 
 class Sat(Thread):
-    def __init__(self, codigo_ativacao, sat_path, impressora, printer_params, fiscal_printer_type, assinatura):
+    def __init__(self, codigo_ativacao, sat_path, impressora, printer_params,
+                 fiscal_printer_type, assinatura):
         Thread.__init__(self)
         self.codigo_ativacao = codigo_ativacao
         self.sat_path = sat_path
@@ -94,6 +96,8 @@ class Sat(Thread):
         # self.printer = self._init_printer()
         self.device = self._get_device()
         self.assinatura = assinatura
+        self.sended_orders = OrderedDict()
+        self.order_transmitting = False
 
         # try:
         #     self.printer_conf = config.carregar('/opt/sat/satextrato.ini')
@@ -111,6 +115,13 @@ class Sat(Thread):
     def get_status(self):
         self.lockedstart()
         return self.status
+
+    def check_sendered_orders_limit(self):
+        if len(self.sended_orders) > 30:
+            last_key = next(reversed(self.sended_orders))
+            last_order = {last_key: self.sended_orders[last_key]}
+            self.sended_orders.clear()
+            self.sended_orders.update(last_order)
 
     def set_status(self, status, message=None):
         if status == self.status['status']:
@@ -143,11 +154,15 @@ class Sat(Thread):
         )
 
     def status_sat(self):
+        if self.order_transmitting:
+            _logger.info("Transmitting Order, aborting status consult")
+            return
         with self.satlock:
             if self.device:
                 try:
                     if self.device.consultar_sat():
                         self.set_status('connected', 'Connected to SAT')
+                        self.check_sendered_orders_limit()
                 except ErroRespostaSATInvalida as ex_sat_invalida:
                     # o equipamento retornou uma resposta que não faz sentido;
                     # loga, e lança novamente ou lida de alguma maneira
@@ -360,31 +375,49 @@ class Sat(Thread):
             **kwargs
         )
 
-    def _send_cfe(self, cfe_json):
-        try:
-            dados_venda = self.__prepare_send_cfe(cfe_json)
-            _logger.info(dados_venda.validar())
-            _logger.info(dados_venda.documento())
-            resposta = self.device.enviar_dados_venda(dados_venda=dados_venda)
-            _logger.info(resposta.numeroSessao)
-            _logger.info(resposta.EEEEE)
-            _logger.info(resposta.CCCC)
-            _logger.info(resposta.mensagem)
-            _logger.info(resposta.cod)
-            _logger.info(resposta.mensagemSEFAZ)
-            return json.dumps(resposta.__dict__, cls=RespostaEncoder)
+    def check_trasmited_orders(self, cfe_json):
+        return self.sended_orders.get(cfe_json["name"], False)
 
-        except Exception as e:
-            if hasattr(e, 'resposta'):
-                _logger.info(e)
-                return e.resposta.mensagem
-            elif hasattr(e, 'message'):
-                _logger.info(e)
-                return e.message
-            else:
-                _logger.info(e)
-                return "Erro ao validar os dados para o xml! " \
-                       "Contate o suporte técnico."
+    def _send_cfe(self, cfe_json):
+        res = self.check_trasmited_orders(cfe_json)
+        if res:
+            return res
+        if not self.order_transmitting:
+            self.order_transmitting = True
+            try:
+                dados_venda = self.__prepare_send_cfe(cfe_json)
+                resposta_consulta = self.device.consultar_sat()
+                if resposta_consulta.EEEEE == '08000':
+                    resposta = self.device.enviar_dados_venda(
+                        dados_venda=dados_venda)
+                    self.set_transmited_order(cfe_json, resposta)
+                    res = json.dumps(resposta.__dict__, cls=RespostaEncoder)
+            except Exception as e:
+                res = self.send_cfe_errors(e)
+        else:
+            res = 'SAT Ocupado!'
+
+        return res
+
+    def set_transmited_order(self, cfe_json, resposta):
+        if resposta.EEEEE == '06000':
+            self.sended_orders.get(cfe_json['name'])
+            self.order_transmitting = False
+
+    def send_cfe_errors(self, e):
+        res = ''
+        if hasattr(e, 'resposta'):
+            self.order_transmitting = False
+            res = f"{e.resposta.EEEEE} {e.resposta.mensagem} " \
+                  f"{e.resposta.cod} {e.resposta.mensagemSEFAZ}"
+        elif hasattr(e, 'message'):
+            self.order_transmitting = False
+            res = e.message
+        else:
+            self.order_transmitting = False
+            res = f"""Erro ao validar os dados para o xml!
+                                Contate o suporte tecnico. Erro: {e.args}"""
+        return res
 
     def __prepare_cancel_cfe(self, chCanc, cnpj, doc_destinatario=False):
         kwargs = {}
@@ -585,7 +618,7 @@ class Sat(Thread):
         while True:
             if self.device:
                 self.status_sat()
-                time.sleep(40)
+                time.sleep(300)
             else:
                 self.device = self.action_call_sat('get_device')
                 if not self.device:
