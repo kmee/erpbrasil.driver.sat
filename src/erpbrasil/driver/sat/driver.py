@@ -342,9 +342,10 @@ class Sat(Thread):
                 kwargs['destinatario'] = Destinatario(CNPJ=documento)
             if cnpj_cpf.validar_cpf(documento):
                 kwargs['destinatario'] = Destinatario(CPF=documento)
+        ie = punctuation_rm(json['company']['ie'])
         emitente = Emitente(
             CNPJ=punctuation_rm(json['company']['cnpj']),
-            IE=punctuation_rm(json['company']['ie']),
+            IE=f"{ie: <12}",
             indRatISSQN='N')
         emitente.validar()
         if json.get('additional_data'):
