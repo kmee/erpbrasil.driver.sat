@@ -10,6 +10,9 @@ import base64
 from datetime import datetime
 import json
 
+from erpbrasil.base.misc import punctuation_rm
+from erpbrasil.base.fiscal import cnpj_cpf
+
 _logger = logging.getLogger(__name__)
 
 try:
@@ -53,8 +56,6 @@ try:
     from satcfe.excecoes import ExcecaoRespostaSAT
     from satextrato import ExtratoCFeVenda
     from satextrato import ExtratoCFeCancelamento
-    from erpbrasil.base.misc import punctuation_rm
-    from erpbrasil.base.fiscal import cnpj_cpf
     from satextrato import config
 except ImportError:
     _logger.error('Odoo module hw_l10n_br_pos depends on the satcfe module')
@@ -83,7 +84,8 @@ class RespostaEncoder(json.JSONEncoder):
 
 
 class Sat(Thread):
-    def __init__(self, codigo_ativacao, sat_path, impressora, printer_params, fiscal_printer_type, assinatura):
+    def __init__(self, codigo_ativacao, sat_path, impressora, printer_params,
+                 fiscal_printer_type, assinatura):
         Thread.__init__(self)
         self.codigo_ativacao = codigo_ativacao
         self.sat_path = sat_path
@@ -171,7 +173,9 @@ class Sat(Thread):
                 (item['quantity'] * item['price']) - item['price_display']
             ).quantize(TWOPLACES)
         # estimated_taxes = D(0.01 * item['price_display']).quantize(TWOPLACES)
-        estimated_taxes = D(item['amount_estimate_tax'] * item['price_without_tax']).quantize(TWOPLACES)
+        estimated_taxes = D(
+            item['amount_estimate_tax'] * item['price_without_tax']).quantize(
+            TWOPLACES)
 
         produto = ProdutoServico(
             cProd=str(item['product_default_code']),
@@ -229,7 +233,9 @@ class Sat(Thread):
             if item['pis_cst_code'] in ['01', '02', '05']:
                 pis = PISAliq(
                     CST=item['pis_cst_code'],
-                    vBC=D(item['pis_base'] * item['price_without_tax']).quantize(D('0.01')),
+                    vBC=D(
+                        item['pis_base'] * item['price_without_tax']).quantize(
+                        D('0.01')),
                     # TODO: Verificar se é possível implementar no frontend
                     pPIS=al_pis_proprio,
                 )
@@ -248,19 +254,23 @@ class Sat(Thread):
             elif item['pis_cst_code'] == '99':
                 pis = PISOutr(
                     CST=item['pis_cst_code'],
-                    vBC=D(item['pis_base'] * item['price_without_tax']).quantize(D('0.01')),
+                    vBC=D(
+                        item['pis_base'] * item['price_without_tax']).quantize(
+                        D('0.01')),
                     pPIS=al_pis_proprio,
                 )
 
             # COFINS
             # TODO: Implementer cofins ST
 
-            al_cofins_proprio = D(item['cofins_percent'] / 100).quantize(D('0.0001'))
+            al_cofins_proprio = D(item['cofins_percent'] / 100).quantize(
+                D('0.0001'))
 
             if item['cofins_cst_code'] in ['01', '02', '05']:
                 cofins = COFINSAliq(
                     CST=item['cofins_cst_code'],
-                    vBC=D(item['cofins_base'] * item['price_without_tax']).quantize(D('0.01')),
+                    vBC=D(item['cofins_base'] * item[
+                        'price_without_tax']).quantize(D('0.01')),
                     pCOFINS=al_cofins_proprio,
                 )
             elif item['cofins_cst_code'] in ['04', '06', '07', '08', '09']:
@@ -278,7 +288,8 @@ class Sat(Thread):
             elif item['cofins_cst_code'] == '99':
                 cofins = COFINSOutr(
                     CST=item['cofins_cst_code'],
-                    vBC=D(item['cofins_base'] * item['price_without_tax']).quantize(D('0.01')),
+                    vBC=D(item['cofins_base'] * item[
+                        'price_without_tax']).quantize(D('0.01')),
                     pCOFINS=al_cofins_proprio,
                 )
 
@@ -380,19 +391,20 @@ class Sat(Thread):
         except Exception as e:
             if hasattr(e, 'resposta'):
                 _logger.info(e)
-                return e.resposta.mensagem
+                return f"{e.resposta.EEEEE} {e.resposta.CCCC} {e.resposta.mensagem} {e.resposta.cod} {e.resposta.mensagemSEFAZ}"
             elif hasattr(e, 'message'):
                 _logger.info(e)
                 return e.message
             else:
                 _logger.info(e)
-                return "Erro ao validar os dados para o xml! " \
-                       "Contate o suporte técnico."
+                return f"""Erro ao validar os dados para o xml!
+                                Contate o suporte tecnico. Erro: {e.args}"""
 
     def __prepare_cancel_cfe(self, chCanc, cnpj, doc_destinatario=False):
         kwargs = {}
         if doc_destinatario:
-            kwargs['destinatario'] = Destinatario(CPF=punctuation_rm(doc_destinatario))
+            kwargs['destinatario'] = Destinatario(
+                CPF=punctuation_rm(doc_destinatario))
         return CFeCancelamento(
             chCanc=chCanc,
             CNPJ=punctuation_rm(cnpj),
@@ -543,9 +555,11 @@ class Sat(Thread):
 
         try:
             printer = self._init_printer()
-            _logger.info(f'Arquivo para impressao: {base64.b64decode(xml).decode("utf-8")}')
+            _logger.info(
+                f'Arquivo para impressao: {base64.b64decode(xml).decode("utf-8")}')
             ExtratoCFeVenda(
-                fp=io.StringIO(base64.b64decode(xml).decode('utf-8')), impressora=printer, config=self.printer_conf
+                fp=io.StringIO(base64.b64decode(xml).decode('utf-8')),
+                impressora=printer, config=self.printer_conf
             ).imprimir()
             try:
                 printer.kick_drawer(0)
@@ -563,7 +577,8 @@ class Sat(Thread):
         printer = self._init_printer()
         extrato = ExtratoCFeCancelamento(
             fp_venda=io.StringIO(base64.b64decode(xml_venda).decode('utf-8')),
-            fp_canc=io.StringIO(base64.b64decode(xml_cancelamento).decode('utf-8')),
+            fp_canc=io.StringIO(
+                base64.b64decode(xml_cancelamento).decode('utf-8')),
             impressora=printer,
             config=self.printer_conf
         )
@@ -588,7 +603,7 @@ class Sat(Thread):
         while True:
             if self.device:
                 self.status_sat()
-                time.sleep(40)
+                time.sleep(1800)
             else:
                 self.device = self.action_call_sat('get_device')
                 if not self.device:
