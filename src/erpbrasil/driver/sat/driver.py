@@ -60,6 +60,9 @@ except ImportError:
     _logger.error('Odoo module hw_l10n_br_pos depends on the satcfe module')
     satcfe = None
 
+from erpbrasil.base.misc import punctuation_rm
+from erpbrasil.base.fiscal import cnpj_cpf
+
 TAX_FRAMEWORK_SIMPLES = "1"
 TAX_FRAMEWORK_SIMPLES_EX = "2"
 TAX_FRAMEWORK_NORMAL = "3"
