@@ -513,7 +513,7 @@ class Sat(Thread):
         elif self.impressora == 'elgin-i9':
             _logger.info('SAT Impressao: Elgin I9')
             from pyescpos.impl.elgin import ElginI9 as Printer
-        elif self.impressora == 'generic':
+        elif self.impressora in ['generic', 'GenericESCPOS']:
             _logger.info('SAT Impressao: GenericESCPOS')
             from pyescpos.impl.epson import GenericESCPOS as Printer
         else:
