@@ -497,7 +497,7 @@ class Sat(Thread):
         elif self.fiscal_printer_type == 'SerialConnection':
             from pyescpos.conn.serial import SerialSettings as Connection
             conn = Connection.parse(self.printer_params).get_connection()
-        elif self.fiscal_printer_type == 'USBConnection':
+        elif self.fiscal_printer_type in ['USBConnection', 'Windows']:
             from pyescpos.conn.win32 import Win32Raw as Connection
             conn = Connection.create(**kwargs)
 
